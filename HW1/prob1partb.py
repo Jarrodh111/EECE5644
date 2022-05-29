@@ -72,12 +72,23 @@ plt.title("Data and True Labels")
 plt.tight_layout()
 plt.show()
 
-
 Y = np.array(range(C))  # 0-(C-1)
 
 # We are going to use a 0-1 loss matrix for this problem
 Lambda = np.ones((C, C)) - np.identity(C)
 print(Lambda)
+
+#Use Naive Approach
+mu = np.array([[-0.5, -0.5, -0.5],
+               [1, 1, 1]])  # Gaussian distributions means
+
+Sigma = np.array([[[1, 0, 0],
+                   [0, 1, 0],
+                   [0, 0, 1]],
+
+                  [[1, 0, 0],
+                   [0, 1, 0],
+                   [0, 0, 1]]])  # Gaussian distributions covariance matrices
 
 # Calculate class-conditional likelihoods p(x|Y=j) for each label of the N observations
 class_cond_likelihoods = np.array([multivariate_normal.pdf(X, mu[j], Sigma[j]) for j in Y])
@@ -98,9 +109,17 @@ gamma_decisions=np.zeros(N)
 
 print("\nTesting Gammas")
 fig = plt.figure(figsize=(12, 10))
+
 min_test_prob_error=1
 best_gamma=-1
-test_gamma=[0, 0.1, 0.3, 0.5, 2, 10, 100, 1000000]
+test_gamma= np.append((np.arange(0,4,.01)),(np.arange(4,100,1)))
+test_gamma= np.append(test_gamma,[10,100,1000,10000,100000,1000000,1000000000,100000000000000])
+true_pos_prob=np.zeros(len(test_gamma))
+false_pos_prob=np.zeros(len(test_gamma))
+false_neg_prob=np.zeros(len(test_gamma))
+true_neg_prob=np.zeros(len(test_gamma))
+test_prob_error=np.zeros(len(test_gamma))
+gindex=0
 for g in test_gamma:
     gamma_conf_mat = np.zeros((C, C))
     for j in range(N):
@@ -121,26 +140,30 @@ for g in test_gamma:
         #TN
         if(gamma_decisions[j]==0 and y[j]==0):
             gamma_conf_mat[1][1]+=1
-    true_pos_prob=gamma_conf_mat[0][0]/(gamma_conf_mat[0][0]+gamma_conf_mat[1][0])
-    false_pos_prob=gamma_conf_mat[0][1]/(gamma_conf_mat[0][1]+gamma_conf_mat[1][1])
-    false_neg_prob=1-true_pos_prob
-    true_neg_prob=1-false_neg_prob
-    test_prob_error=false_pos_prob*priors[0]+false_neg_prob*priors[1]
-    plt.plot(false_pos_prob, true_pos_prob, 'bo', label=g)
-    if(test_prob_error<min_test_prob_error):
-        min_test_prob_error=test_prob_error
+    true_pos_prob[gindex]=gamma_conf_mat[0][0]/(gamma_conf_mat[0][0]+gamma_conf_mat[1][0])
+    false_pos_prob[gindex]=gamma_conf_mat[0][1]/(gamma_conf_mat[0][1]+gamma_conf_mat[1][1])
+    false_neg_prob[gindex]=1-true_pos_prob[gindex]
+    true_neg_prob[gindex]=1-false_neg_prob[gindex]
+    test_prob_error[gindex]=false_pos_prob[gindex]*priors[0]+false_neg_prob[gindex]*priors[1]
+    if(test_prob_error[gindex]<min_test_prob_error):
+        min_test_prob_error=test_prob_error[gindex]
         best_gamma=g
+    gindex+=1
+plt.plot(false_pos_prob, true_pos_prob, 'bo')
+bestgind=np.argmin(test_prob_error)
+plt.plot(false_pos_prob[bestgind], true_pos_prob[bestgind], 'go', markersize=15, label="Optimal Gamma = " +str(best_gamma))
+plt.text(0.1, 0.8, s="("+str(round(false_pos_prob[bestgind],3)) + ", "+str(round(true_pos_prob[bestgind],3))+")")
+plt.text(0.5, 0.5, s="min prob. of error = " + str(round(min_test_prob_error,3)))
 print(best_gamma,min_test_prob_error)
 plt.legend()
-ax.set_xlabel("x-axis")
-ax.set_ylabel("y-axis")
-plt.title("Data and True Labels")
+plt.xlabel("False Positive Probability")
+plt.ylabel("True Positive Probability")
+plt.ylim(-0.1, 1.1)
+plt.xlim(-0.1, 1.1)
+plt.title("ROC Curve Part B")
 plt.tight_layout()
 plt.show()
 ##################    End Generate Different Gamma    ##################
-
-
-
 
 # We want to create the risk matrix of size 3 x N 
 cond_risk = Lambda.dot(class_posteriors)
@@ -170,7 +193,7 @@ for i in Y: # Each decision option
         # True label = Marker shape; Decision = Marker Color
         marker = marker_shapes[j] + marker_colors[i]
         if i == j:
-            ax.scatter(X[ind_ij, 0], X[ind_ij, 1], X[ind_ij, 2], marker, label="Correct Class "+str(j))
+            ax.scatter(X[ind_ij, 0], X[ind_ij, 1], X[ind_ij, 2], marker_shapes[j]+'g', label="Correct Class "+str(j))
 
         if i != j:
             ax.scatter(X[ind_ij, 0], X[ind_ij, 1], X[ind_ij, 2], marker, s=500, label="Incorrect Class "+str(j))
@@ -186,5 +209,5 @@ plt.legend()
 ax.set_xlabel("z-axis")
 ax.set_ylabel("y-axis")
 ax.set_zlabel("z-axis")
-plt.title("Minimum Probability of Error Classified Sampled Data:  {:.3f}".format(prob_error))
+plt.title("Minimum Probability of Error Classified Sampled Data Part B:  {:.3f}".format(prob_error))
 plt.show()
