@@ -116,8 +116,8 @@ ax = fig.add_subplot(111, projection='3d')
 
 # class 0 circle, class 1 +, correct green, incorrect red
 ax.scatter(X[ind_00_map, 0], X[ind_00_map, 1], X[ind_00_map, 2], 'b', label="Correct Class 0")
-ax.scatter(X[ind_10_map, 0], X[ind_10_map, 1], X[ind_10_map, 2], 'g', label="Incorrect Class 0")
-ax.scatter(X[ind_01_map, 0], X[ind_01_map, 1], X[ind_01_map, 2], 'o', label="Incorrect Class 1")
+ax.scatter(X[ind_10_map, 0], X[ind_10_map, 1], X[ind_10_map, 2], 'g', s=500, label="Incorrect Class 0")
+ax.scatter(X[ind_01_map, 0], X[ind_01_map, 1], X[ind_01_map, 2], 'o', s=500, label="Incorrect Class 1")
 ax.scatter(X[ind_11_map, 0], X[ind_11_map, 1], X[ind_11_map, 2], 'r', label="Correct Class 1")
 
 plt.legend()
@@ -216,8 +216,8 @@ ax = fig.add_subplot(111, projection='3d')
 
 # class 0 circle, class 1 +, correct green, incorrect red
 ax.scatter(X[ind_00_map, 0], X[ind_00_map, 1], X[ind_00_map, 2], 'b', label="Correct Class 0")
-ax.scatter(X[ind_10_map, 0], X[ind_10_map, 1], X[ind_10_map, 2], 'g', label="Incorrect Class 0")
-ax.scatter(X[ind_01_map, 0], X[ind_01_map, 1], X[ind_01_map, 2], 'o', label="Incorrect Class 1")
+ax.scatter(X[ind_10_map, 0], X[ind_10_map, 1], X[ind_10_map, 2], 'g', s=500, label="Incorrect Class 0")
+ax.scatter(X[ind_01_map, 0], X[ind_01_map, 1], X[ind_01_map, 2], 'o', s=500, label="Incorrect Class 1")
 ax.scatter(X[ind_11_map, 0], X[ind_11_map, 1], X[ind_11_map, 2], 'r', label="Correct Class 1")
 
 plt.legend()
@@ -294,8 +294,8 @@ ax = fig.add_subplot(111, projection='3d')
 
 # class 0 circle, class 1 +, correct green, incorrect red
 ax.scatter(X[ind_00_lda, 0], X[ind_00_lda, 1], X[ind_00_lda, 2], 'r', label="Correct Class 0")
-ax.scatter(X[ind_10_lda, 0], X[ind_10_lda, 1], X[ind_10_lda, 2], 'o', label="Incorrect Class 0")
-ax.scatter(X[ind_01_lda, 0], X[ind_01_lda, 1], X[ind_01_lda, 2], 'g', label="Incorrect Class 1")
+ax.scatter(X[ind_10_lda, 0], X[ind_10_lda, 1], X[ind_10_lda, 2], 'o', s=500, label="Incorrect Class 0")
+ax.scatter(X[ind_01_lda, 0], X[ind_01_lda, 1], X[ind_01_lda, 2], 'g', s=500, label="Incorrect Class 1")
 ax.scatter(X[ind_11_lda, 0], X[ind_11_lda, 1], X[ind_11_lda, 2], 'b', label="Correct Class 1")
 
 plt.legend()
