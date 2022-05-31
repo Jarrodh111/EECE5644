@@ -100,10 +100,9 @@ for r in L: # Each decision option
         else:
             plt.plot(X[ind_rc, 0], X[ind_rc, 1], marker+'r')
 
-#plt.legend()
 plt.xlabel(r"$x_1$")
 plt.ylabel(r"$x_2$")
-plt.title("Classification Decisions: Marker Shape/Predictions, Color/True Labels")
+plt.title("Classification Decisions: Marker Shape/Class, Color/Correct Labels")
 plt.tight_layout()
 plt.show()
 
@@ -167,9 +166,50 @@ for r in L: # Each decision option
         else:
             plt.plot(Z_UMM[ind_rc, 0], Z_UMM[ind_rc, 1], marker+'r')
 
-#plt.legend()
 plt.xlabel(r"$x_1$")
 plt.ylabel(r"$x_2$")
-plt.title("Classification Decisions: Marker Shape/Predictions, Color/True Labels")
+plt.title("Classification Decisions: Marker Shape/Class, Color/Correct Labels")
+plt.tight_layout()
+plt.show()
+
+fig = plt.figure(figsize=(10, 10))
+ax = fig.add_subplot(111, projection='3d')
+marker_shapes = '.o^1s+*'
+marker_colors = 'rbgmgbrrbgmgbr' 
+for r in L: # Each decision option
+    for c in L: # Each class label
+        ind_rc = np.argwhere((decisions==r) & (labels==c))
+
+        # Decision = Marker Shape; True Labels = Marker Color
+        #marker = marker_shapes[r-4]
+        if r == c:
+            ax.scatter(Z_UMM[ind_rc, 0], Z_UMM[ind_rc, 1], Z_UMM[ind_rc, 2], c='g', marker = marker_shapes[r-4])
+        else:
+            ax.scatter(Z_UMM[ind_rc, 0], Z_UMM[ind_rc, 1], Z_UMM[ind_rc, 2], c='r', marker = marker_shapes[r-4])
+
+plt.xlabel(r"$x_1$")
+plt.ylabel(r"$x_2$")
+plt.title("Classification Decisions: Marker Shape/Class, Color/Correct Labels")
+plt.tight_layout()
+plt.show()
+
+fig = plt.figure(figsize=(10, 10))
+ax = fig.add_subplot(111, projection='3d')
+marker_shapes = '.o^1s+*'
+marker_colors = 'rbgymck' 
+for r in L: # Each decision option
+    for c in L: # Each class label
+        ind_rc = np.argwhere((decisions==r) & (labels==c))
+
+        # Decision = Marker Shape; True Labels = Marker Color
+        #marker = marker_shapes[r-4]
+        if r == c:
+            ax.scatter(Z_UMM[ind_rc, 0], Z_UMM[ind_rc, 1], Z_UMM[ind_rc, 2], c=marker_colors[r-4], marker = marker_shapes[r-4], s=1)
+        else:
+            ax.scatter(Z_UMM[ind_rc, 0], Z_UMM[ind_rc, 1], Z_UMM[ind_rc, 2], c=marker_colors[r-4], marker = marker_shapes[r-4], s=1)
+
+plt.xlabel(r"$x_1$")
+plt.ylabel(r"$x_2$")
+plt.title("PCA Dimensionality Reduction on Dataset")
 plt.tight_layout()
 plt.show()

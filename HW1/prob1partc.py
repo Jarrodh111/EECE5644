@@ -124,7 +124,7 @@ plt.legend()
 ax.set_xlabel("x-axis")
 ax.set_ylabel("y-axis")
 ax.set_zlabel("z-axis")
-plt.title("MAP Decisions (RED incorrect)")
+plt.title("Part A ERM Decisions")
 plt.tight_layout()
 plt.show()
 
@@ -159,14 +159,80 @@ roc_map = np.array((p_10_map, p_11_map))
 fig = plt.figure(figsize=(12, 10))
 plt.plot(roc_erm[0], roc_erm[1])
 plt.plot(roc_map[0], roc_map[1], 'rx', label="Minimum P(Error) MAP", markersize=16)
+plt.text(0.5, 0.4, s="min prob. of error = " + str(round(prob_error_erm,3)))
+plt.text(0.1, 0.8, s="("+str(round(roc_map[0],3)) + ", "+str(round(roc_map[1],3))+")")
 plt.legend()
 plt.xlabel(r"Probability of false alarm $P(D=1|L=0)$")
 plt.ylabel(r"Probability of correct decision $P(D=1|L=1)$")
+plt.title("ROC Curve Part A")
 plt.grid(True)
 
 plt.show()
 
+##################    Generate Different Gamma    ##################
+class_cond_ratio=np.zeros(N)
+for i in range(N):
+    class_cond_ratio[i]=class_conditional_likelihoods[0][i]/class_conditional_likelihoods[1][i]
 
+gamma_decisions=np.zeros(N)
+
+print("\nTesting Gammas")
+fig = plt.figure(figsize=(12, 10))
+
+min_test_prob_error=1
+best_gamma=-1
+test_gamma= np.append((np.arange(0,4,.01)),(np.arange(4,100,1)))
+test_gamma= np.append(test_gamma,[10,100,1000,10000,100000,1000000,1000000000,100000000000000])
+true_pos_prob=np.zeros(len(test_gamma))
+false_pos_prob=np.zeros(len(test_gamma))
+false_neg_prob=np.zeros(len(test_gamma))
+true_neg_prob=np.zeros(len(test_gamma))
+test_prob_error=np.zeros(len(test_gamma))
+gindex=0
+for g in test_gamma:
+    gamma_conf_mat = np.zeros((C, C))
+    for j in range(N):
+        if(class_conditional_likelihoods[1][j]>class_conditional_likelihoods[0][j]*g):
+            gamma_decisions[j]=1
+        else:
+            gamma_decisions[j]=0
+
+        #TP
+        if(gamma_decisions[j]==1 and labels[j]==1):
+            gamma_conf_mat[0][0]+=1
+        #FP
+        if(gamma_decisions[j]==1 and labels[j]==0):
+            gamma_conf_mat[0][1]+=1
+        #FN
+        if(gamma_decisions[j]==0 and labels[j]==1):
+            gamma_conf_mat[1][0]+=1
+        #TN
+        if(gamma_decisions[j]==0 and labels[j]==0):
+            gamma_conf_mat[1][1]+=1
+    true_pos_prob[gindex]=gamma_conf_mat[0][0]/(gamma_conf_mat[0][0]+gamma_conf_mat[1][0])
+    false_pos_prob[gindex]=gamma_conf_mat[0][1]/(gamma_conf_mat[0][1]+gamma_conf_mat[1][1])
+    false_neg_prob[gindex]=1-true_pos_prob[gindex]
+    true_neg_prob[gindex]=1-false_neg_prob[gindex]
+    test_prob_error[gindex]=false_pos_prob[gindex]*priors[0]+false_neg_prob[gindex]*priors[1]
+    if(test_prob_error[gindex]<min_test_prob_error):
+        min_test_prob_error=test_prob_error[gindex]
+        best_gamma=g
+    gindex+=1
+plt.plot(false_pos_prob, true_pos_prob, 'bo')
+bestgind=np.argmin(test_prob_error)
+plt.plot(false_pos_prob[bestgind], true_pos_prob[bestgind], 'go', markersize=15, label="Optimal Gamma = " +str(best_gamma))
+plt.text(0.1, 0.8, s="("+str(round(false_pos_prob[bestgind],3)) + ", "+str(round(true_pos_prob[bestgind],3))+")")
+plt.text(0.5, 0.5, s="min prob. of error = " + str(round(min_test_prob_error,3)))
+print(best_gamma,min_test_prob_error)
+plt.legend()
+plt.xlabel("False Positive Probability")
+plt.ylabel("True Positive Probability")
+plt.ylim(-0.1, 1.1)
+plt.xlim(-0.1, 1.1)
+plt.title("ROC Curve Part A")
+plt.tight_layout()
+plt.show()
+##################    End Generate Different Gamma    ##################
 ##################   Part B
 
 # Expected Risk Minimization Classifier (using true model parameters)
@@ -224,7 +290,7 @@ plt.legend()
 ax.set_xlabel("x-axis")
 ax.set_ylabel("y-axis")
 ax.set_zlabel("z-axis")
-plt.title("MAP Decisions (RED incorrect)")
+plt.title("Part B ERM Decisions")
 plt.tight_layout()
 plt.show()
 
@@ -235,13 +301,79 @@ roc_map = np.array((p_10_map, p_11_map))
 fig = plt.figure(figsize=(12, 10))
 plt.plot(roc_erm[0], roc_erm[1])
 plt.plot(roc_map[0], roc_map[1], 'rx', label="Minimum P(Error) MAP", markersize=16)
+plt.text(0.5, 0.4, s="min prob. of error = " + str(round(prob_error_erm,3)))
+plt.text(0.1, 0.8, s="("+str(round(roc_map[0],3)) + ", "+str(round(roc_map[1],3))+")")
 plt.legend()
 plt.xlabel(r"Probability of false alarm $P(D=1|L=0)$")
 plt.ylabel(r"Probability of correct decision $P(D=1|L=1)$")
+plt.title("ROC Curve Part B")
 plt.grid(True)
 
 plt.show()
+##################    Generate Different Gamma    ##################
+class_cond_ratio=np.zeros(N)
+for i in range(N):
+    class_cond_ratio[i]=class_conditional_likelihoods[0][i]/class_conditional_likelihoods[1][i]
 
+gamma_decisions=np.zeros(N)
+
+print("\nTesting Gammas")
+fig = plt.figure(figsize=(12, 10))
+
+min_test_prob_error=1
+best_gamma=-1
+test_gamma= np.append((np.arange(0,4,.01)),(np.arange(4,100,1)))
+test_gamma= np.append(test_gamma,[10,100,1000,10000,100000,1000000,1000000000,100000000000000])
+true_pos_prob=np.zeros(len(test_gamma))
+false_pos_prob=np.zeros(len(test_gamma))
+false_neg_prob=np.zeros(len(test_gamma))
+true_neg_prob=np.zeros(len(test_gamma))
+test_prob_error=np.zeros(len(test_gamma))
+gindex=0
+for g in test_gamma:
+    gamma_conf_mat = np.zeros((C, C))
+    for j in range(N):
+        if(class_conditional_likelihoods[1][j]>class_conditional_likelihoods[0][j]*g):
+            gamma_decisions[j]=1
+        else:
+            gamma_decisions[j]=0
+
+        #TP
+        if(gamma_decisions[j]==1 and labels[j]==1):
+            gamma_conf_mat[0][0]+=1
+        #FP
+        if(gamma_decisions[j]==1 and labels[j]==0):
+            gamma_conf_mat[0][1]+=1
+        #FN
+        if(gamma_decisions[j]==0 and labels[j]==1):
+            gamma_conf_mat[1][0]+=1
+        #TN
+        if(gamma_decisions[j]==0 and labels[j]==0):
+            gamma_conf_mat[1][1]+=1
+    true_pos_prob[gindex]=gamma_conf_mat[0][0]/(gamma_conf_mat[0][0]+gamma_conf_mat[1][0])
+    false_pos_prob[gindex]=gamma_conf_mat[0][1]/(gamma_conf_mat[0][1]+gamma_conf_mat[1][1])
+    false_neg_prob[gindex]=1-true_pos_prob[gindex]
+    true_neg_prob[gindex]=1-false_neg_prob[gindex]
+    test_prob_error[gindex]=false_pos_prob[gindex]*priors[0]+false_neg_prob[gindex]*priors[1]
+    if(test_prob_error[gindex]<min_test_prob_error):
+        min_test_prob_error=test_prob_error[gindex]
+        best_gamma=g
+    gindex+=1
+plt.plot(false_pos_prob, true_pos_prob, 'bo')
+bestgind=np.argmin(test_prob_error)
+plt.plot(false_pos_prob[bestgind], true_pos_prob[bestgind], 'go', markersize=15, label="Optimal Gamma = " +str(best_gamma))
+plt.text(0.1, 0.8, s="("+str(round(false_pos_prob[bestgind],3)) + ", "+str(round(true_pos_prob[bestgind],3))+")")
+plt.text(0.5, 0.5, s="min prob. of error = " + str(round(min_test_prob_error,3)))
+print(best_gamma,min_test_prob_error)
+plt.legend()
+plt.xlabel("False Positive Probability")
+plt.ylabel("True Positive Probability")
+plt.ylim(-0.1, 1.1)
+plt.xlim(-0.1, 1.1)
+plt.title("ROC Curve Part B")
+plt.tight_layout()
+plt.show()
+##################    End Generate Different Gamma    ##################
 ##############  PART C
 
 lda = LinearDiscriminantAnalysis()
@@ -264,10 +396,13 @@ min_ind = np.argmin(prob_error_lda)
 fig = plt.figure(figsize=(12, 10))
 plt.plot(roc_lda[0], roc_lda[1], 'b:')
 plt.plot(roc_lda[0, min_ind], roc_lda[1, min_ind], 'r.', label="Minimum P(Error) LDA", markersize=16)
-plt.title("ROC Curves for ERM and LDA")
+plt.text(0.5, 0.4, s="min prob. of error = " + str(round(min_prob_error_lda,3)))
+plt.text(0.1, 0.8, s="("+str(round(roc_map[0],3)) + ", "+str(round(roc_map[1],3))+")")
+plt.title("ROC Curve Part C")
 plt.legend()
 
 plt.show()
+
 
 # Use min-error threshold
 decisions_lda = discriminant_score_lda >= tau_lda[min_ind]
@@ -301,9 +436,75 @@ ax.scatter(X[ind_11_lda, 0], X[ind_11_lda, 1], X[ind_11_lda, 2], 'b', label="Cor
 plt.legend()
 plt.xlabel(r"$x_1$")
 plt.ylabel(r"$x_2$")
-plt.title("LDA Decisions (RED incorrect)")
+plt.title("LDA Part C Decisions")
 plt.tight_layout()
 plt.show()
 
 print("Smallest P(error) for ERM = {}".format(prob_error_erm))
 print("Smallest P(error) for LDA = {}".format(min_prob_error_lda))
+
+##################    Generate Different Gamma    ##################
+class_cond_ratio=np.zeros(N)
+for i in range(N):
+    class_cond_ratio[i]=class_conditional_likelihoods[0][i]/class_conditional_likelihoods[1][i]
+
+gamma_decisions=np.zeros(N)
+
+print("\nTesting Gammas")
+fig = plt.figure(figsize=(12, 10))
+
+min_test_prob_error=1
+best_gamma=-1
+test_gamma= np.array(np.arange(-5,5,.01))
+test_gamma= np.append(test_gamma,[10,100,1000,10000,100000,1000000,1000000000,100000000000000])
+test_gamma= np.append(test_gamma,[-10,-100,-1000,-10000,-100000,-1000000,-1000000000,-100000000000000])
+true_pos_prob=np.zeros(len(test_gamma))
+false_pos_prob=np.zeros(len(test_gamma))
+false_neg_prob=np.zeros(len(test_gamma))
+true_neg_prob=np.zeros(len(test_gamma))
+test_prob_error=np.zeros(len(test_gamma))
+gindex=0
+for g in test_gamma:
+    gamma_conf_mat = np.zeros((C, C))
+    for j in range(N):
+        if(discriminant_score_lda[j] >= g):
+            gamma_decisions[j]=1
+        else:
+            gamma_decisions[j]=0
+
+        #TP
+        if(gamma_decisions[j]==1 and labels[j]==1):
+            gamma_conf_mat[0][0]+=1
+        #FP
+        if(gamma_decisions[j]==1 and labels[j]==0):
+            gamma_conf_mat[0][1]+=1
+        #FN
+        if(gamma_decisions[j]==0 and labels[j]==1):
+            gamma_conf_mat[1][0]+=1
+        #TN
+        if(gamma_decisions[j]==0 and labels[j]==0):
+            gamma_conf_mat[1][1]+=1
+    true_pos_prob[gindex]=gamma_conf_mat[0][0]/(gamma_conf_mat[0][0]+gamma_conf_mat[1][0])
+    false_pos_prob[gindex]=gamma_conf_mat[0][1]/(gamma_conf_mat[0][1]+gamma_conf_mat[1][1])
+    false_neg_prob[gindex]=1-true_pos_prob[gindex]
+    true_neg_prob[gindex]=1-false_neg_prob[gindex]
+    test_prob_error[gindex]=false_pos_prob[gindex]*priors[0]+false_neg_prob[gindex]*priors[1]
+    if(test_prob_error[gindex]<min_test_prob_error):
+        min_test_prob_error=test_prob_error[gindex]
+        best_gamma=g
+    gindex+=1
+plt.plot(false_pos_prob, true_pos_prob, 'bo')
+bestgind=np.argmin(test_prob_error)
+plt.plot(false_pos_prob[bestgind], true_pos_prob[bestgind], 'go', markersize=15, label="Optimal Tau = " +str(round(best_gamma, 3)))
+plt.text(0.1, 0.8, s="("+str(round(false_pos_prob[bestgind],3)) + ", "+str(round(true_pos_prob[bestgind],3))+")")
+plt.text(0.5, 0.5, s="min prob. of error = " + str(round(min_test_prob_error,3)))
+print(best_gamma,min_test_prob_error)
+plt.legend()
+plt.xlabel("False Positive Probability")
+plt.ylabel("True Positive Probability")
+plt.ylim(-0.1, 1.1)
+plt.xlim(-0.1, 1.1)
+plt.title("ROC Curve Part C")
+plt.tight_layout()
+plt.show()
+##################    End Generate Different Gamma    ##################
