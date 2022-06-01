@@ -10,6 +10,7 @@ from sys import float_info # Threshold smallest positive floating value
 
 from scipy.stats import multivariate_normal # MVN not univariate
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.metrics import confusion_matrix
 
 np.set_printoptions(suppress=True)
 
@@ -106,6 +107,15 @@ p_01_map = len(ind_01_map) / Nl[1]
 # True Positive Probability
 ind_11_map = np.argwhere((decisions_map==1) & (labels==1))
 p_11_map = len(ind_11_map) / Nl[1]
+
+# Simply using sklearn confusion matrix
+print("Confusion Matrix (rows: Predicted class, columns: True class):")
+conf_mat = confusion_matrix(decisions_map, labels)
+print(conf_mat)
+correct_class_samples = np.sum(np.diag(conf_mat))
+print("Total Mumber of Misclassified Samples: {:d}".format(N - correct_class_samples))
+prob_error = 1 - (correct_class_samples / N)
+print("Empirically Estimated Probability of Error: {:.4f}".format(prob_error))
 
 # Probability of error for MAP classifier, empirically estimated
 prob_error_erm = np.array((p_10_map, p_01_map)).dot(Nl.T / N)
@@ -273,6 +283,15 @@ p_01_map = len(ind_01_map) / Nl[1]
 ind_11_map = np.argwhere((decisions_map==1) & (labels==1))
 p_11_map = len(ind_11_map) / Nl[1]
 
+# Simply using sklearn confusion matrix
+print("Confusion Matrix (rows: Predicted class, columns: True class):")
+conf_mat = confusion_matrix(decisions_map, labels)
+print(conf_mat)
+correct_class_samples = np.sum(np.diag(conf_mat))
+print("Total Mumber of Misclassified Samples: {:d}".format(N - correct_class_samples))
+prob_error = 1 - (correct_class_samples / N)
+print("Empirically Estimated Probability of Error: {:.4f}".format(prob_error))
+
 # Probability of error for MAP classifier, empirically estimated
 prob_error_erm = np.array((p_10_map, p_01_map)).dot(Nl.T / N)
 print(np.array((p_10_map, p_01_map)).shape)
@@ -422,6 +441,15 @@ p_01_lda = len(ind_01_lda) / Nl[1]
 # True Positive Probability
 ind_11_lda = np.argwhere((decisions_lda==1) & (labels==1))
 p_11_lda = len(ind_11_lda) / Nl[1]
+
+# Simply using sklearn confusion matrix
+print("Confusion Matrix (rows: Predicted class, columns: True class):")
+conf_mat = confusion_matrix(decisions_lda, labels)
+print(conf_mat)
+correct_class_samples = np.sum(np.diag(conf_mat))
+print("Total Mumber of Misclassified Samples: {:d}".format(N - correct_class_samples))
+prob_error = 1 - (correct_class_samples / N)
+print("Empirically Estimated Probability of Error: {:.4f}".format(prob_error))
 
 # Display LDA decisions
 fig = plt.figure(figsize=(10, 10))

@@ -49,9 +49,9 @@ for i in c:
     mu[i-3]=np.mean(X[labels==i,:], axis=0)
     Sigma[i-3]=np.cov(X[labels==i,:],rowvar=False)+con_lambda*np.identity(n)
 print(mu)
-print(Sigma)
+#print(Sigma)
 
-print(priors)
+#print(priors)
 
 ###### Model
 
