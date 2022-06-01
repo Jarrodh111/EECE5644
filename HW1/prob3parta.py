@@ -102,7 +102,7 @@ for r in L: # Each decision option
 
 plt.xlabel(r"$x_1$")
 plt.ylabel(r"$x_2$")
-plt.title("Classification Decisions: Marker Shape/Class, Color/Correct Labels")
+plt.title("2D view Classification Decisions: Marker Shape/Class, Color/Correct Labels")
 plt.tight_layout()
 plt.show()
 
@@ -168,7 +168,7 @@ for r in L: # Each decision option
 
 plt.xlabel(r"$x_1$")
 plt.ylabel(r"$x_2$")
-plt.title("Classification Decisions: Marker Shape/Class, Color/Correct Labels")
+plt.title("PCA of Classification Decisions: Marker Shape/Class, Color/Correct Labels")
 plt.tight_layout()
 plt.show()
 
@@ -189,7 +189,7 @@ for r in L: # Each decision option
 
 plt.xlabel(r"$x_1$")
 plt.ylabel(r"$x_2$")
-plt.title("Classification Decisions: Marker Shape/Class, Color/Correct Labels")
+plt.title("PCA of Classification Decisions: Marker Shape/Class, Color/Correct Labels")
 plt.tight_layout()
 plt.show()
 
@@ -210,6 +210,6 @@ for r in L: # Each decision option
 
 plt.xlabel(r"$x_1$")
 plt.ylabel(r"$x_2$")
-plt.title("PCA Dimensionality Reduction on Dataset")
+plt.title("PCA Dimensionality Reduction on Dataset: Colors/Classes")
 plt.tight_layout()
 plt.show()
