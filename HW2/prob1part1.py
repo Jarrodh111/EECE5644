@@ -156,7 +156,7 @@ N_per_l = np.array([sum(labels == 0),sum(labels == 1)])
 print(N_per_l)
 
 plt.plot(X[labels == 0, 0], X[labels == 0, 1], 'om', label="Class 0")
-plt.plot(X[labels == 1, 0], X[labels == 1, 1], 'ob', label="Class 1")
+plt.plot(X[labels == 1, 0], X[labels == 1, 1], 'oy', label="Class 1")
 plt.xlabel(r"$x_1$")
 plt.ylabel(r"$x_2$")
 # Set equal axes for 3D plots
@@ -243,7 +243,7 @@ print("Empirically Estimated Probability of Error: {:.4f}".format(prob_error))
 
 fig_disc_grid, ax_disc = plt.subplots(figsize=(10, 10));
 marker_shapes = '.^s*' # Accomodates up to C=5
-marker_colors = 'mbyr'
+marker_colors = 'mybr'
 for i in Y: # Each decision option
     for j in Y: # Each class label
         ind_ij = np.argwhere((decisions_map==i) & (labels==j))
