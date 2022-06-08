@@ -54,7 +54,11 @@ def generate_data_from_gmm(N, pdf_params, fig_ax=None):
             X[indices, 0] =  norm.rvs(pdf_params['mu'][y-1], pdf_params['Sigma'][y-1], Ny)
         else:
             X[indices, :] =  multivariate_normal.rvs(pdf_params['mu'][y-1], pdf_params['Sigma'][y-1], Ny)
-                
+    for l in range(len(labels)):
+        if labels[l]==1:
+            labels[l]=0
+        if labels[l]==2:
+            labels[l]=1            
     if fig_ax and (0 < n <= 3):
         if n == 1:
             fig_ax.scatter(X, np.zeros(N), c=labels)
@@ -392,7 +396,6 @@ plt.subplots_adjust(left=0.05,
 handles, labels = ax_decision[0, 1].get_legend_handles_labels()
 fig_decision.legend(handles, labels, loc='lower center')
 
-plt.tight_layout()
 plt.show()
 
 # NOTE that the initial parameters have added dimensionality to match the basis expansion set
@@ -443,5 +446,4 @@ plt.subplots_adjust(left=0.05,
 handles, labels = ax_decision[0, 1].get_legend_handles_labels()
 fig_decision.legend(handles, labels, loc='lower center')
 
-plt.tight_layout()
 plt.show()

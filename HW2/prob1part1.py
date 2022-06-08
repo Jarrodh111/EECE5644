@@ -164,6 +164,7 @@ plt.ylabel(r"$x_2$")
 plt.title("Data and True Class Labels")
 plt.legend()
 plt.tight_layout()
+plt.gca().set_aspect('equal', adjustable='box')
 plt.show()
 
 # Compute class conditional likelihoods to express ratio test, where ratio is discriminant score
@@ -226,6 +227,7 @@ print("Min Empirical Gamma = {:.3f}".format(np.exp(gammas_empirical[min_ind_empi
 print("Min Theoretical P(error) for ERM = {:.3f}".format(min_prob_error_map))
 print("Min Theoretical Gamma = {:.3f}".format(gamma_map))
 
+plt.title("ROC Curve Part 1")
 plt.show()
 
 
@@ -240,8 +242,8 @@ print("Empirically Estimated Probability of Error: {:.4f}".format(prob_error))
 
 
 fig_disc_grid, ax_disc = plt.subplots(figsize=(10, 10));
-marker_shapes = '.^s' # Accomodates up to C=5
-marker_colors = 'mbgmy'
+marker_shapes = '.^s*' # Accomodates up to C=5
+marker_colors = 'mbyr'
 for i in Y: # Each decision option
     for j in Y: # Each class label
         ind_ij = np.argwhere((decisions_map==i) & (labels==j))
@@ -249,12 +251,14 @@ for i in Y: # Each decision option
 
         # True label = Marker shape; Decision = Marker Color
         marker = marker_shapes[j] + marker_colors[i]
-        plt.plot(X[ind_ij, 0], X[ind_ij, 1], marker_shapes[j]+marker_colors[j], markersize=5, markerfacecolor='none')
+        if i == j:
+            plt.plot(X[ind_ij, 0], X[ind_ij, 1], marker, markersize=5, markerfacecolor='none', label="Correct Class "+str(i))
 
+        marker = marker_shapes[j+2] + marker_colors[i+2]
         if i != j:
-            plt.plot(X[ind_ij, 0], X[ind_ij, 1], marker_shapes[j]+'r', markersize=5, markerfacecolor='none')
+            plt.plot(X[ind_ij, 0], X[ind_ij, 1], marker, markersize=5, markerfacecolor='none', label="Incorrect Class "+str(i))
 
-#plt.show()
+
 ################################### add countour
 
 
@@ -280,8 +284,13 @@ contour_levels = min_DSGV.tolist() + [0] + max_DSGV.tolist()
 cs = ax_disc.contour(horizontal_grid, vertical_grid, discriminant_score_grid_vals.tolist(), contour_levels, colors='k')
 ax_disc.clabel(cs, fontsize=16, inline=1)
 
-plt.show()
-print("owa owa")
+plt.xlabel(r"$x_1$")
+plt.ylabel(r"$x_2$")
+# Set equal axes for 3D plots
 
-#################################### Part 2
+plt.title("MAP Decisions")
+plt.legend()
+plt.tight_layout()
+plt.gca().set_aspect('equal', adjustable='box')
+plt.show()
 
