@@ -109,26 +109,26 @@ ax_raw = fig.add_subplot(111, projection='3d')
 
 N_train = 10000
 N_valid = 10000
-X_train, y_train = generate_data_from_gmm(N_train, gmm_pdf)
+
 X_valid, y_valid = generate_data_from_gmm(N_valid, gmm_pdf)
 
-n = X_train.shape[1]
+n = X_valid.shape[1]
 L = np.array(range(num_classes))
 print(L)
 
 # Count up the number of samples per class
-N_per_l = np.array([sum(y_train == l) for l in L])
+N_per_l = np.array([sum(y_valid == l) for l in L])
 print(N_per_l)
 
-ax_raw.scatter(X_train[y_train == 0, 0], X_train[y_train == 0, 1], X_train[y_train == 0, 2], c='r', label="Class 0")
-ax_raw.scatter(X_train[y_train == 1, 0], X_train[y_train == 1, 1], X_train[y_train == 1, 2], c='b', label="Class 1")
-ax_raw.scatter(X_train[y_train == 2, 0], X_train[y_train == 2, 1], X_train[y_train == 2, 2], c='g', label="Class 2")
-ax_raw.scatter(X_train[y_train == 3, 0], X_train[y_train == 3, 1], X_train[y_train == 3, 2], c='m', label="Class 3")
+ax_raw.scatter(X_valid[y_valid == 0, 0], X_valid[y_valid == 0, 1], X_valid[y_valid == 0, 2], c='r', label="Class 0")
+ax_raw.scatter(X_valid[y_valid == 1, 0], X_valid[y_valid == 1, 1], X_valid[y_valid == 1, 2], c='b', label="Class 1")
+ax_raw.scatter(X_valid[y_valid == 2, 0], X_valid[y_valid == 2, 1], X_valid[y_valid == 2, 2], c='g', label="Class 2")
+ax_raw.scatter(X_valid[y_valid == 3, 0], X_valid[y_valid == 3, 1], X_valid[y_valid == 3, 2], c='m', label="Class 3")
 ax_raw.set_xlabel(r"$x_1$")
 ax_raw.set_ylabel(r"$x_2$")
 ax_raw.set_zlabel(r"$x_3$")
 # Set equal axes for 3D plots
-ax_raw.set_box_aspect((np.ptp(X_train[:, 0]), np.ptp(X_train[:, 1]), np.ptp(X_train[:, 2])))
+ax_raw.set_box_aspect((np.ptp(X_valid[:, 0]), np.ptp(X_valid[:, 1]), np.ptp(X_valid[:, 2])))
 
 plt.title("Data and True Class Labels")
 plt.legend()
@@ -204,7 +204,7 @@ xx, yy, zz = np.meshgrid(np.linspace(-4, 4, 250), np.linspace(-4, 4, 250), np.li
 grid = np.c_[xx.ravel(), yy.ravel(), zz.ravel()]
 grid_tensor = torch.FloatTensor(grid)  
 
-input_dim = X_train.shape[1]
+input_dim = X_valid.shape[1]
 output_dim = len(gmm_pdf['priors'])
 
 
@@ -236,7 +236,7 @@ def model_train_loader(model, dataloader, criterion, optimizer):
         # Report loss every 10 batches
         if batch % 10 == 0:
             loss, current = loss.item(), batch * len(X)
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+            #print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
     
             
 def model_test_loader(model, dataloader, criterion):
@@ -254,13 +254,13 @@ def model_test_loader(model, dataloader, criterion):
             
     test_loss /= num_batches
     correct /= size
-    print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+    #print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
     
 
 
 print("CV Running:")
 #########################################################   Do CV
-def do_cv_on_data(datasize):
+def do_cv_on_data(X_train, y_train, X_valid, y_valid):
     nerons = np.arange(10, 55, 5)
     n_nerons= len(nerons)
 
@@ -318,7 +318,7 @@ def do_cv_on_data(datasize):
 
             optimizer = torch.optim.SGD(quick_two_layer_mlp.parameters(), lr=0.01, momentum=0.9, nesterov=True)
             for t in range(num_epochs):
-                print(f"Epoch {t+1}\n-------------------------------")
+                #print(f"Epoch {t+1}\n-------------------------------")
                 model_train_loader(quick_two_layer_mlp, train_dataloader, criterion, optimizer)
                 model_test_loader(quick_two_layer_mlp, test_dataloader, criterion)
 
@@ -333,11 +333,11 @@ def do_cv_on_data(datasize):
 
 
             # Simply using sklearn confusion matrix
-            print("Confusion Matrix (rows: Predicted class, columns: True class):")
+            #print("Confusion Matrix (rows: Predicted class, columns: True class):")
             conf_mat = confusion_matrix(Z_pred, y_valid_k)
-            print(conf_mat)
+            #print(conf_mat)
             correct_class_samples = np.sum(np.diag(conf_mat))
-            print("Total Mumber of Misclassified Samples: {:d}".format(len(Z_pred) - correct_class_samples))
+            #print("Total Mumber of Misclassified Samples: {:d}".format(len(Z_pred) - correct_class_samples))
 
             # Alternatively work out probability error based on incorrect decisions per class
             # perror_per_class = np.array(((conf_mat[1,0]+conf_mat[2,0])/Nl[0], (conf_mat[0,1]+conf_mat[2,1])/Nl[1], (conf_mat[0,2]+conf_mat[1,2])/Nl[2]))
@@ -393,7 +393,7 @@ def do_cv_on_data(datasize):
 
     optimizer = torch.optim.SGD(quick_two_layer_mlp.parameters(), lr=0.01, momentum=0.9, nesterov=True)
     for t in range(num_epochs):
-        print(f"Epoch {t+1}\n-------------------------------")
+        #print(f"Epoch {t+1}\n-------------------------------")
         model_train_loader(quick_two_layer_mlp, train_dataloader, criterion, optimizer)
         model_test_loader(quick_two_layer_mlp, test_dataloader, criterion)
 
@@ -462,8 +462,26 @@ def do_cv_on_data(datasize):
     ax_raw.set_box_aspect((np.ptp(X_train[:, 0]), np.ptp(X_train[:, 1]), np.ptp(X_train[:, 2])))
     plt.title("MLP Classification Boundaries Test Set")
     plt.show()
+    return prob_error
 
 
 ############# End of do CV on data function
+Training_sizes=[100,200,1000,2000,5000]
+testing_perfomance=np.zeros(len(Training_sizes))
+i=0
+for T in Training_sizes:
+    X_train, y_train = generate_data_from_gmm(T, gmm_pdf)
+    print("\n#########################################")
+    print("#########################################")
+    print("Testing on trainingset size: "+str(T))
+    print("#########################################")
+    print("#########################################\n")
+    testing_perfomance[i] = do_cv_on_data(X_train, y_train, X_valid, y_valid)
+    print("\n#########################################")
+    print("#########################################")
+    print("Finished Testing on trainingset size: "+str(T))
+    print("#########################################")
+    print("#########################################\n")
+    i+=1
 
-do_cv_on_data(1)
+print(testing_perfomance)
