@@ -77,7 +77,7 @@ def generate_data_from_gmm(N, pdf_params):
 
 
 # Generate dataset from two different 3D Gaussian distributions/categories
-N = 10000
+
 
 gmm_pdf = {}
 
@@ -107,8 +107,10 @@ gmm_pdf['C'] = np.array([[[1, 0, 0],
 fig = plt.figure(figsize=(10, 10))
 ax_raw = fig.add_subplot(111, projection='3d')
 
-X_train, y_train = generate_data_from_gmm(N, gmm_pdf)
-X_valid, y_valid = generate_data_from_gmm(N, gmm_pdf)
+N_train = 10000
+N_valid = 10000
+X_train, y_train = generate_data_from_gmm(N_train, gmm_pdf)
+X_valid, y_valid = generate_data_from_gmm(N_valid, gmm_pdf)
 
 n = X_train.shape[1]
 L = np.array(range(num_classes))
@@ -151,20 +153,20 @@ class_posteriors = class_priors.dot(class_cond_likelihoods)
 
 # MAP rule, take largest class posterior per example as your decisions matrix (N, 1)
 # Careful of indexing! Added np.ones(N) just for difference in starting from 0 in Python and labels={1,2,3}
-decisions = np.argmax(class_posteriors, axis=0) + 0*np.ones(N) 
+decisions = np.argmax(class_posteriors, axis=0) + 0*np.ones(N_valid) 
 
 # Simply using sklearn confusion matrix
 print("Confusion Matrix (rows: Predicted class, columns: True class):")
 conf_mat = confusion_matrix(decisions, y_valid)
 print(conf_mat)
 correct_class_samples = np.sum(np.diag(conf_mat))
-print("Total Mumber of Misclassified Samples: {:d}".format(N - correct_class_samples))
+print("Total Mumber of Misclassified Samples: {:d}".format(N_valid - correct_class_samples))
 
 # Alternatively work out probability error based on incorrect decisions per class
 # perror_per_class = np.array(((conf_mat[1,0]+conf_mat[2,0])/Nl[0], (conf_mat[0,1]+conf_mat[2,1])/Nl[1], (conf_mat[0,2]+conf_mat[1,2])/Nl[2]))
 # prob_error = perror_per_class.dot(Nl.T / N)
 
-prob_error = 1 - (correct_class_samples / N)
+prob_error = 1 - (correct_class_samples / N_valid)
 print("Empirically Estimated Probability of Error: {:.4f}".format(prob_error))
 
 # Plot for decisions vs true labels
@@ -206,48 +208,15 @@ input_dim = X_train.shape[1]
 output_dim = len(gmm_pdf['priors'])
 
 
-n_hidden_neurons = 16
 
 
 
 #################################################   Define NN and Algos
-
-
-# Parameters like n_hidden_neurons set above
-quick_two_layer_mlp = nn.Sequential(
-    nn.Linear(input_dim, n_hidden_neurons),
-    nn.ReLU(),
-    nn.Linear(n_hidden_neurons, output_dim),
-    nn.LogSoftmax(dim=1)
-)
-# Stochastic GD with learning rate and momentum hyperparameters
-optimizer = torch.optim.SGD(quick_two_layer_mlp.parameters(), lr=0.01, momentum=0.9)
 # The nn.CrossEntropyLoss() loss function automatically performs a log_softmax() to 
 # the output when validating, on top of calculating the negative log-likelihood using 
 # nn.NLLLoss(), while also being more stable numerically... So don't implement from scratch
 criterion = nn.CrossEntropyLoss()
 num_epochs = 10    #100
-
-# Convert numpy structures to PyTorch tensors, as these are the data types required by the library
-X_tensor = torch.FloatTensor(X_train)
-y_tensor = torch.LongTensor(y_train)
-
-
-
-# Backpropagation training insert here
-
-X_test_tensor = torch.FloatTensor(X_valid)
-y_test_tensor = torch.LongTensor(y_valid)
-
-# Create your dataset objects
-train_data = TensorDataset(X_tensor, y_tensor) 
-test_data = TensorDataset(X_test_tensor, y_test_tensor) 
-
-train_dataloader = DataLoader(train_data, batch_size=500, shuffle=True)
-test_dataloader = DataLoader(test_data, batch_size=64) # No need to shuffle...
-
-
-
 
 
 def model_train_loader(model, dataloader, criterion, optimizer):
@@ -289,219 +258,212 @@ def model_test_loader(model, dataloader, criterion):
     
 
 
-# Let's train the Sequential model this time
-# And look at how we're training + testing in parallel
-# Useful if we wanted to do something like early stopping!
-# Nesterov is a better revision of the momentum update
-optimizer = torch.optim.SGD(quick_two_layer_mlp.parameters(), lr=0.01, momentum=0.9, nesterov=True)
-for t in range(num_epochs):
-    print(f"Epoch {t+1}\n-------------------------------")
-    model_train_loader(quick_two_layer_mlp, train_dataloader, criterion, optimizer)
-    model_test_loader(quick_two_layer_mlp, test_dataloader, criterion)
-
-
 print("CV Running:")
 #########################################################   Do CV
-nerons = np.arange(10, 55, 5)
-n_nerons= len(nerons)
+def do_cv_on_data(datasize):
+    nerons = np.arange(10, 55, 5)
+    n_nerons= len(nerons)
 
 
-# Number of folds for CV
-K = 10
+    # Number of folds for CV
+    K = 10
 
-# STEP 1: Partition the dataset into K approximately-equal-sized partitions
-# Shuffles data before doing the division into folds (not necessary, but a good idea)
-kf = KFold(n_splits=K, shuffle=True) 
+    # STEP 1: Partition the dataset into K approximately-equal-sized partitions
+    # Shuffles data before doing the division into folds (not necessary, but a good idea)
+    kf = KFold(n_splits=K, shuffle=True) 
 
-# Allocate space for CV
-# No need for training loss storage too but useful comparison
-mse_valid_mk = np.empty((n_nerons, K)) 
-mse_train_mk = np.empty((n_nerons, K)) # Indexed by model m, data partition k
+    # Allocate space for CV
+    # No need for training loss storage too but useful comparison
+    mse_valid_mk = np.empty((n_nerons, K)) 
+    mse_train_mk = np.empty((n_nerons, K)) # Indexed by model m, data partition k
 
-# STEP 2: Try all polynomial orders between 1 (best line fit) and 21 (big time overfit) M=2
-nerind=0
-for ner in nerons:
-    # K-fold cross validation
-    k = 0
-    # NOTE that these subsets are of the TRAINING dataset
-    # Imagine we don't have enough data available to afford another entirely separate validation set
-    for train_indices, valid_indices in kf.split(X_train):
-        # Extract the training and validation sets from the K-fold split
+    # STEP 2: Try all polynomial orders between 1 (best line fit) and 21 (big time overfit) M=2
+    nerind=0
+    for ner in nerons:
+        # K-fold cross validation
+        k = 0
+        # NOTE that these subsets are of the TRAINING dataset
+        # Imagine we don't have enough data available to afford another entirely separate validation set
+        for train_indices, valid_indices in kf.split(X_train):
+            # Extract the training and validation sets from the K-fold split
 
-        X_train_k = X_train[train_indices]
-        y_train_k = y_train[train_indices]
-        X_valid_k = X_train[valid_indices]
-        y_valid_k = y_train[valid_indices]
+            X_train_k = X_train[train_indices]
+            y_train_k = y_train[train_indices]
+            X_valid_k = X_train[valid_indices]
+            y_valid_k = y_train[valid_indices]
 
-        # Convert numpy structures to PyTorch tensors, as these are the data types required by the library
-        X_tensor = torch.FloatTensor(X_train_k)
-        y_tensor = torch.LongTensor(y_train_k)
-        # Backpropagation training insert here
+            # Convert numpy structures to PyTorch tensors, as these are the data types required by the library
+            X_tensor = torch.FloatTensor(X_train_k)
+            y_tensor = torch.LongTensor(y_train_k)
+            # Backpropagation training insert here
 
-        X_test_tensor = torch.FloatTensor(X_valid_k)
-        y_test_tensor = torch.LongTensor(y_valid_k)
+            X_test_tensor = torch.FloatTensor(X_valid_k)
+            y_test_tensor = torch.LongTensor(y_valid_k)
 
-        # Create your dataset objects
-        train_data = TensorDataset(X_tensor, y_tensor) 
-        test_data = TensorDataset(X_test_tensor, y_test_tensor) 
+            # Create your dataset objects
+            train_data = TensorDataset(X_tensor, y_tensor) 
+            test_data = TensorDataset(X_test_tensor, y_test_tensor) 
 
-        train_dataloader = DataLoader(train_data, batch_size=500, shuffle=True)
-        test_dataloader = DataLoader(test_data, batch_size=64) # No need to shuffle...
+            train_dataloader = DataLoader(train_data, batch_size=500, shuffle=True)
+            test_dataloader = DataLoader(test_data, batch_size=64) # No need to shuffle...
 
-        
-        # Train model parameters
-        quick_two_layer_mlp = nn.Sequential(
-            nn.Linear(input_dim, ner),
-            nn.ReLU(),
-            nn.Linear(ner, output_dim),
-            nn.LogSoftmax(dim=1)
-        )      
-
-        optimizer = torch.optim.SGD(quick_two_layer_mlp.parameters(), lr=0.01, momentum=0.9, nesterov=True)
-        for t in range(num_epochs):
-            print(f"Epoch {t+1}\n-------------------------------")
-            model_train_loader(quick_two_layer_mlp, train_dataloader, criterion, optimizer)
-            model_test_loader(quick_two_layer_mlp, test_dataloader, criterion)
-
-
-        # Validation fold polynomial transformation
-
-        # Make predictions on both the training and validation set
-        Z_probs = quick_two_layer_mlp(X_test_tensor).detach().numpy()
-        Z_pred = np.argmax(Z_probs, 1)
-
-        # Record MSE as well for this model and k-fold
-
-
-        # Simply using sklearn confusion matrix
-        print("Confusion Matrix (rows: Predicted class, columns: True class):")
-        conf_mat = confusion_matrix(Z_pred, y_valid_k)
-        print(conf_mat)
-        correct_class_samples = np.sum(np.diag(conf_mat))
-        print("Total Mumber of Misclassified Samples: {:d}".format(N - correct_class_samples))
-
-        # Alternatively work out probability error based on incorrect decisions per class
-        # perror_per_class = np.array(((conf_mat[1,0]+conf_mat[2,0])/Nl[0], (conf_mat[0,1]+conf_mat[2,1])/Nl[1], (conf_mat[0,2]+conf_mat[1,2])/Nl[2]))
-        # prob_error = perror_per_class.dot(Nl.T / N)
-
-        prob_error = 1 - (correct_class_samples / N)
-
-
-        mse_train_mk[nerind - 1, k] = prob_error
-        mse_valid_mk[nerind - 1, k] = prob_error
-
-        k += 1
-
-    nerind+=1
             
-# STEP 3: Compute the average MSE loss for that model (based in this case on degree d)
-mse_train_m = np.mean(mse_train_mk, axis=1) # Model average CV loss over folds
-mse_valid_m = np.mean(mse_valid_mk, axis=1) 
+            # Train model parameters
+            quick_two_layer_mlp = nn.Sequential(
+                nn.Linear(input_dim, ner),
+                nn.ReLU(),
+                nn.Linear(ner, output_dim),
+                nn.LogSoftmax(dim=1)
+            )      
 
-# +1 as the index starts from 0 while the degrees start from 1
-optimal_d = nerons[np.argmin(mse_valid_m)]
-print(mse_valid_mk)
-print("#########################################################################")
-print("The model selected to best fit the data without overfitting is: d={}".format(optimal_d))
-print("#########################################################################")
-
-# STEP 4: Re-train using your optimally selected model (degree=3) and deploy!!
-# Convert numpy structures to PyTorch tensors, as these are the data types required by the library
-
-X_tensor = torch.FloatTensor(X_train)
-y_tensor = torch.LongTensor(y_train)
-# Backpropagation training insert here
-
-X_test_tensor = torch.FloatTensor(X_valid)
-y_test_tensor = torch.LongTensor(y_valid)
-
-# Create your dataset objects
-train_data = TensorDataset(X_tensor, y_tensor) 
-test_data = TensorDataset(X_test_tensor, y_test_tensor) 
-
-train_dataloader = DataLoader(train_data, batch_size=500, shuffle=True)
-test_dataloader = DataLoader(test_data, batch_size=64) # No need to shuffle...
+            optimizer = torch.optim.SGD(quick_two_layer_mlp.parameters(), lr=0.01, momentum=0.9, nesterov=True)
+            for t in range(num_epochs):
+                print(f"Epoch {t+1}\n-------------------------------")
+                model_train_loader(quick_two_layer_mlp, train_dataloader, criterion, optimizer)
+                model_test_loader(quick_two_layer_mlp, test_dataloader, criterion)
 
 
-# Train model parameters
-quick_two_layer_mlp = nn.Sequential(
-    nn.Linear(input_dim, optimal_d),
-    nn.ReLU(),
-    nn.Linear(optimal_d, output_dim),
-    nn.LogSoftmax(dim=1)
-)   
- 
+            # Validation fold polynomial transformation
 
-optimizer = torch.optim.SGD(quick_two_layer_mlp.parameters(), lr=0.01, momentum=0.9, nesterov=True)
-for t in range(num_epochs):
-    print(f"Epoch {t+1}\n-------------------------------")
-    model_train_loader(quick_two_layer_mlp, train_dataloader, criterion, optimizer)
-    model_test_loader(quick_two_layer_mlp, test_dataloader, criterion)
+            # Make predictions on both the training and validation set
+            Z_probs = quick_two_layer_mlp(X_test_tensor).detach().numpy()
+            Z_pred = np.argmax(Z_probs, 1)
+
+            # Record MSE as well for this model and k-fold
 
 
-# Validation fold polynomial transformation
+            # Simply using sklearn confusion matrix
+            print("Confusion Matrix (rows: Predicted class, columns: True class):")
+            conf_mat = confusion_matrix(Z_pred, y_valid_k)
+            print(conf_mat)
+            correct_class_samples = np.sum(np.diag(conf_mat))
+            print("Total Mumber of Misclassified Samples: {:d}".format(len(Z_pred) - correct_class_samples))
 
-# Make predictions on both the training and validation set
-Z_probs = quick_two_layer_mlp(X_test_tensor).detach().numpy()
-Z_pred = np.argmax(Z_probs, 1)
+            # Alternatively work out probability error based on incorrect decisions per class
+            # perror_per_class = np.array(((conf_mat[1,0]+conf_mat[2,0])/Nl[0], (conf_mat[0,1]+conf_mat[2,1])/Nl[1], (conf_mat[0,2]+conf_mat[1,2])/Nl[2]))
+            # prob_error = perror_per_class.dot(Nl.T / N)
 
-# Record MSE as well for this model and k-fold
-
-
-# Simply using sklearn confusion matrix
-print("Confusion Matrix (rows: Predicted class, columns: True class):")
-conf_mat = confusion_matrix(Z_pred, y_valid)
-print(conf_mat)
-correct_class_samples = np.sum(np.diag(conf_mat))
-print("Total Mumber of Misclassified Samples: {:d}".format(N - correct_class_samples))
-
-# Alternatively work out probability error based on incorrect decisions per class
-# perror_per_class = np.array(((conf_mat[1,0]+conf_mat[2,0])/Nl[0], (conf_mat[0,1]+conf_mat[2,1])/Nl[1], (conf_mat[0,2]+conf_mat[1,2])/Nl[2]))
-# prob_error = perror_per_class.dot(Nl.T / N)
-
-prob_error = 1 - (correct_class_samples / N)
-
-#########################################################   End CV
+            prob_error = 1 - (correct_class_samples / len(Z_pred))
 
 
+            mse_train_mk[nerind - 1, k] = prob_error
+            mse_valid_mk[nerind - 1, k] = prob_error
 
-######################################################## Make Predictions with final trained model
+            k += 1
 
-# Z matrix are the predictions resulting from the forward pass through the network
-Z_probs = quick_two_layer_mlp(X_test_tensor).detach().numpy()
-print(Z_probs.shape)
-Z_pred = np.argmax(Z_probs, 1)
+        nerind+=1
+                
+    # STEP 3: Compute the average MSE loss for that model (based in this case on degree d)
+    mse_train_m = np.mean(mse_train_mk, axis=1) # Model average CV loss over folds
+    mse_valid_m = np.mean(mse_valid_mk, axis=1) 
 
-fig = plt.figure(figsize=(10, 10))
-ax_raw = fig.add_subplot(111, projection='3d')
+    # +1 as the index starts from 0 while the degrees start from 1
+    optimal_d = nerons[np.argmin(mse_valid_m)]
+    print(mse_valid_mk)
+    print("#########################################################################")
+    print("The model selected to best fit the data without overfitting is: d={}".format(optimal_d))
+    print("#########################################################################")
 
-# uses gray background for black dots
-#plt.pcolormesh(xx, yy, Z_pred, cmap=plt.cm.coolwarm)
-print("predictions")
-print(Z_pred.shape)
-print(Z_pred)
+    # STEP 4: Re-train using your optimally selected model (degree=3) and deploy!!
+    # Convert numpy structures to PyTorch tensors, as these are the data types required by the library
+
+    X_tensor = torch.FloatTensor(X_train)
+    y_tensor = torch.LongTensor(y_train)
+    # Backpropagation training insert here
+
+    X_test_tensor = torch.FloatTensor(X_valid)
+    y_test_tensor = torch.LongTensor(y_valid)
+
+    # Create your dataset objects
+    train_data = TensorDataset(X_tensor, y_tensor) 
+    test_data = TensorDataset(X_test_tensor, y_test_tensor) 
+
+    train_dataloader = DataLoader(train_data, batch_size=500, shuffle=True)
+    test_dataloader = DataLoader(test_data, batch_size=64) # No need to shuffle...
+
+
+    # Train model parameters
+    quick_two_layer_mlp = nn.Sequential(
+        nn.Linear(input_dim, optimal_d),
+        nn.ReLU(),
+        nn.Linear(optimal_d, output_dim),
+        nn.LogSoftmax(dim=1)
+    )   
     
-marker_shapes = '.o^1s+*.o^1s+*'
-marker_colors = 'rbgmgbrrbgmgbr' 
-for r in L: # Each decision option
-    for c in L: # Each class label
-        ind_rc = np.argwhere((Z_pred==r) & (y_valid==c))
 
-        # Decision = Marker Shape; True Labels = Marker Color
+    optimizer = torch.optim.SGD(quick_two_layer_mlp.parameters(), lr=0.01, momentum=0.9, nesterov=True)
+    for t in range(num_epochs):
+        print(f"Epoch {t+1}\n-------------------------------")
+        model_train_loader(quick_two_layer_mlp, train_dataloader, criterion, optimizer)
+        model_test_loader(quick_two_layer_mlp, test_dataloader, criterion)
+
+
+    # Validation fold polynomial transformation
+
+    # Make predictions on both the training and validation set
+    Z_probs = quick_two_layer_mlp(X_test_tensor).detach().numpy()
+    Z_pred = np.argmax(Z_probs, 1)
+
+    # Record MSE as well for this model and k-fold
+
+
+    # Simply using sklearn confusion matrix
+    print("Confusion Matrix (rows: Predicted class, columns: True class):")
+    conf_mat = confusion_matrix(Z_pred, y_valid)
+    print(conf_mat)
+    correct_class_samples = np.sum(np.diag(conf_mat))
+    print("Total Mumber of Misclassified Samples: {:d}".format(len(Z_pred) - correct_class_samples))
+
+    # Alternatively work out probability error based on incorrect decisions per class
+    # perror_per_class = np.array(((conf_mat[1,0]+conf_mat[2,0])/Nl[0], (conf_mat[0,1]+conf_mat[2,1])/Nl[1], (conf_mat[0,2]+conf_mat[1,2])/Nl[2]))
+    # prob_error = perror_per_class.dot(Nl.T / N)
+
+    prob_error = 1 - (correct_class_samples / len(Z_pred))
+
+    #########################################################   End CV
+
+
+
+    ######################################################## Make Predictions with final trained model
+
+    # Z matrix are the predictions resulting from the forward pass through the network
+    Z_probs = quick_two_layer_mlp(X_test_tensor).detach().numpy()
+    print(Z_probs.shape)
+    Z_pred = np.argmax(Z_probs, 1)
+
+    fig = plt.figure(figsize=(10, 10))
+    ax_raw = fig.add_subplot(111, projection='3d')
+
+    # uses gray background for black dots
+    #plt.pcolormesh(xx, yy, Z_pred, cmap=plt.cm.coolwarm)
+    print("predictions")
+    print(Z_pred.shape)
+    print(Z_pred)
         
-        if r == c:
-            ax_raw.scatter(X_valid[ind_rc, 0], X_valid[ind_rc, 1], X_valid[ind_rc, 2], c='g', marker = marker_shapes[r])
-        else:
-            ax_raw.scatter(X_valid[ind_rc, 0], X_valid[ind_rc, 1], X_valid[ind_rc, 2], c='r', marker = marker_shapes[r])
+    marker_shapes = '.o^1s+*.o^1s+*'
+    marker_colors = 'rbgmgbrrbgmgbr' 
+    for r in L: # Each decision option
+        for c in L: # Each class label
+            ind_rc = np.argwhere((Z_pred==r) & (y_valid==c))
+
+            # Decision = Marker Shape; True Labels = Marker Color
+            
+            if r == c:
+                ax_raw.scatter(X_valid[ind_rc, 0], X_valid[ind_rc, 1], X_valid[ind_rc, 2], c='g', marker = marker_shapes[r])
+            else:
+                ax_raw.scatter(X_valid[ind_rc, 0], X_valid[ind_rc, 1], X_valid[ind_rc, 2], c='r', marker = marker_shapes[r])
 
 
 
-ax_raw.set_xlabel(r"$x_1$")
-ax_raw.set_ylabel(r"$x_2$")
-ax_raw.set_zlabel(r"$x_3$")
-# Set equal axes for 3D plots
-ax_raw.set_box_aspect((np.ptp(X_train[:, 0]), np.ptp(X_train[:, 1]), np.ptp(X_train[:, 2])))
-plt.title("MLP Classification Boundaries Test Set")
-plt.show()
+    ax_raw.set_xlabel(r"$x_1$")
+    ax_raw.set_ylabel(r"$x_2$")
+    ax_raw.set_zlabel(r"$x_3$")
+    # Set equal axes for 3D plots
+    ax_raw.set_box_aspect((np.ptp(X_train[:, 0]), np.ptp(X_train[:, 1]), np.ptp(X_train[:, 2])))
+    plt.title("MLP Classification Boundaries Test Set")
+    plt.show()
 
 
+############# End of do CV on data function
+
+do_cv_on_data(1)

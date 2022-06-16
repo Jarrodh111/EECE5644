@@ -12,6 +12,7 @@ from scipy.stats import multivariate_normal as mvn
 from scipy.stats import norm
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import KFold # Important new include
 
 import torch
 import torch.nn as nn
@@ -134,6 +135,9 @@ plt.tight_layout()
 #####################################     END Generate Data
 
 
+
+
+
 ######################################      MAP on Test Data
 
 # Min prob. of error classifier
@@ -187,10 +191,10 @@ plt.title("2D view of Classification Decisions: Marker Shape/Class, Color/Correc
 plt.tight_layout()
 plt.show()
 
-
-
-
 ###############################################     END Map on Test Data
+
+
+
 
 
 # Create coordinate matrices determined by the sample space
@@ -228,18 +232,9 @@ num_epochs = 10    #100
 X_tensor = torch.FloatTensor(X_train)
 y_tensor = torch.LongTensor(y_train)
 
-# Forward pass through MLP
-probs = quick_two_layer_mlp(X_tensor)
-print("probs:")
-print(probs)
+
 
 # Backpropagation training insert here
-
-
-
-
-
-
 
 X_test_tensor = torch.FloatTensor(X_valid)
 y_test_tensor = torch.LongTensor(y_valid)
@@ -293,6 +288,7 @@ def model_test_loader(model, dataloader, criterion):
     print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
     
 
+
 # Let's train the Sequential model this time
 # And look at how we're training + testing in parallel
 # Useful if we wanted to do something like early stopping!
@@ -304,6 +300,172 @@ for t in range(num_epochs):
     model_test_loader(quick_two_layer_mlp, test_dataloader, criterion)
 
 
+print("CV Running:")
+#########################################################   Do CV
+nerons = np.arange(10, 55, 5)
+n_nerons= len(nerons)
+
+
+# Number of folds for CV
+K = 10
+
+# STEP 1: Partition the dataset into K approximately-equal-sized partitions
+# Shuffles data before doing the division into folds (not necessary, but a good idea)
+kf = KFold(n_splits=K, shuffle=True) 
+
+# Allocate space for CV
+# No need for training loss storage too but useful comparison
+mse_valid_mk = np.empty((n_nerons, K)) 
+mse_train_mk = np.empty((n_nerons, K)) # Indexed by model m, data partition k
+
+# STEP 2: Try all polynomial orders between 1 (best line fit) and 21 (big time overfit) M=2
+nerind=0
+for ner in nerons:
+    # K-fold cross validation
+    k = 0
+    # NOTE that these subsets are of the TRAINING dataset
+    # Imagine we don't have enough data available to afford another entirely separate validation set
+    for train_indices, valid_indices in kf.split(X_train):
+        # Extract the training and validation sets from the K-fold split
+
+        X_train_k = X_train[train_indices]
+        y_train_k = y_train[train_indices]
+        X_valid_k = X_train[valid_indices]
+        y_valid_k = y_train[valid_indices]
+
+        # Convert numpy structures to PyTorch tensors, as these are the data types required by the library
+        X_tensor = torch.FloatTensor(X_train_k)
+        y_tensor = torch.LongTensor(y_train_k)
+        # Backpropagation training insert here
+
+        X_test_tensor = torch.FloatTensor(X_valid_k)
+        y_test_tensor = torch.LongTensor(y_valid_k)
+
+        # Create your dataset objects
+        train_data = TensorDataset(X_tensor, y_tensor) 
+        test_data = TensorDataset(X_test_tensor, y_test_tensor) 
+
+        train_dataloader = DataLoader(train_data, batch_size=500, shuffle=True)
+        test_dataloader = DataLoader(test_data, batch_size=64) # No need to shuffle...
+
+        
+        # Train model parameters
+        quick_two_layer_mlp = nn.Sequential(
+            nn.Linear(input_dim, ner),
+            nn.ReLU(),
+            nn.Linear(ner, output_dim),
+            nn.LogSoftmax(dim=1)
+        )      
+
+        optimizer = torch.optim.SGD(quick_two_layer_mlp.parameters(), lr=0.01, momentum=0.9, nesterov=True)
+        for t in range(num_epochs):
+            print(f"Epoch {t+1}\n-------------------------------")
+            model_train_loader(quick_two_layer_mlp, train_dataloader, criterion, optimizer)
+            model_test_loader(quick_two_layer_mlp, test_dataloader, criterion)
+
+
+        # Validation fold polynomial transformation
+
+        # Make predictions on both the training and validation set
+        Z_probs = quick_two_layer_mlp(X_test_tensor).detach().numpy()
+        Z_pred = np.argmax(Z_probs, 1)
+
+        # Record MSE as well for this model and k-fold
+
+
+        # Simply using sklearn confusion matrix
+        print("Confusion Matrix (rows: Predicted class, columns: True class):")
+        conf_mat = confusion_matrix(Z_pred, y_valid_k)
+        print(conf_mat)
+        correct_class_samples = np.sum(np.diag(conf_mat))
+        print("Total Mumber of Misclassified Samples: {:d}".format(N - correct_class_samples))
+
+        # Alternatively work out probability error based on incorrect decisions per class
+        # perror_per_class = np.array(((conf_mat[1,0]+conf_mat[2,0])/Nl[0], (conf_mat[0,1]+conf_mat[2,1])/Nl[1], (conf_mat[0,2]+conf_mat[1,2])/Nl[2]))
+        # prob_error = perror_per_class.dot(Nl.T / N)
+
+        prob_error = 1 - (correct_class_samples / N)
+
+
+        mse_train_mk[nerind - 1, k] = prob_error
+        mse_valid_mk[nerind - 1, k] = prob_error
+
+        k += 1
+
+    nerind+=1
+            
+# STEP 3: Compute the average MSE loss for that model (based in this case on degree d)
+mse_train_m = np.mean(mse_train_mk, axis=1) # Model average CV loss over folds
+mse_valid_m = np.mean(mse_valid_mk, axis=1) 
+
+# +1 as the index starts from 0 while the degrees start from 1
+optimal_d = nerons[np.argmin(mse_valid_m)]
+print(mse_valid_mk)
+print("#########################################################################")
+print("The model selected to best fit the data without overfitting is: d={}".format(optimal_d))
+print("#########################################################################")
+
+# STEP 4: Re-train using your optimally selected model (degree=3) and deploy!!
+# Convert numpy structures to PyTorch tensors, as these are the data types required by the library
+
+X_tensor = torch.FloatTensor(X_train)
+y_tensor = torch.LongTensor(y_train)
+# Backpropagation training insert here
+
+X_test_tensor = torch.FloatTensor(X_valid)
+y_test_tensor = torch.LongTensor(y_valid)
+
+# Create your dataset objects
+train_data = TensorDataset(X_tensor, y_tensor) 
+test_data = TensorDataset(X_test_tensor, y_test_tensor) 
+
+train_dataloader = DataLoader(train_data, batch_size=500, shuffle=True)
+test_dataloader = DataLoader(test_data, batch_size=64) # No need to shuffle...
+
+
+# Train model parameters
+quick_two_layer_mlp = nn.Sequential(
+    nn.Linear(input_dim, optimal_d),
+    nn.ReLU(),
+    nn.Linear(optimal_d, output_dim),
+    nn.LogSoftmax(dim=1)
+)   
+ 
+
+optimizer = torch.optim.SGD(quick_two_layer_mlp.parameters(), lr=0.01, momentum=0.9, nesterov=True)
+for t in range(num_epochs):
+    print(f"Epoch {t+1}\n-------------------------------")
+    model_train_loader(quick_two_layer_mlp, train_dataloader, criterion, optimizer)
+    model_test_loader(quick_two_layer_mlp, test_dataloader, criterion)
+
+
+# Validation fold polynomial transformation
+
+# Make predictions on both the training and validation set
+Z_probs = quick_two_layer_mlp(X_test_tensor).detach().numpy()
+Z_pred = np.argmax(Z_probs, 1)
+
+# Record MSE as well for this model and k-fold
+
+
+# Simply using sklearn confusion matrix
+print("Confusion Matrix (rows: Predicted class, columns: True class):")
+conf_mat = confusion_matrix(Z_pred, y_valid)
+print(conf_mat)
+correct_class_samples = np.sum(np.diag(conf_mat))
+print("Total Mumber of Misclassified Samples: {:d}".format(N - correct_class_samples))
+
+# Alternatively work out probability error based on incorrect decisions per class
+# perror_per_class = np.array(((conf_mat[1,0]+conf_mat[2,0])/Nl[0], (conf_mat[0,1]+conf_mat[2,1])/Nl[1], (conf_mat[0,2]+conf_mat[1,2])/Nl[2]))
+# prob_error = perror_per_class.dot(Nl.T / N)
+
+prob_error = 1 - (correct_class_samples / N)
+
+#########################################################   End CV
+
+
+
+######################################################## Make Predictions with final trained model
 
 # Z matrix are the predictions resulting from the forward pass through the network
 Z_probs = quick_two_layer_mlp(X_test_tensor).detach().numpy()
@@ -315,58 +477,31 @@ ax_raw = fig.add_subplot(111, projection='3d')
 
 # uses gray background for black dots
 #plt.pcolormesh(xx, yy, Z_pred, cmap=plt.cm.coolwarm)
+print("predictions")
 print(Z_pred.shape)
 print(Z_pred)
     
-ax_raw.scatter(X_valid[y_valid==0, 0], X_valid[y_valid==0, 1], X_valid[y_valid==0, 2], 'r', label="Class 0")
-ax_raw.scatter(X_valid[y_valid==1, 0], X_valid[y_valid==1, 1], X_valid[y_valid==1, 2], 'b', label="Class 1")
-ax_raw.scatter(X_valid[y_valid==2, 0], X_valid[y_valid==2, 1], X_valid[y_valid==2, 2], 'g', label="Class 2")
-ax_raw.scatter(X_valid[y_valid==3, 0], X_valid[y_valid==3, 1], X_valid[y_valid==3, 2], 'm', label="Class 3")
+marker_shapes = '.o^1s+*.o^1s+*'
+marker_colors = 'rbgmgbrrbgmgbr' 
+for r in L: # Each decision option
+    for c in L: # Each class label
+        ind_rc = np.argwhere((Z_pred==r) & (y_valid==c))
+
+        # Decision = Marker Shape; True Labels = Marker Color
+        
+        if r == c:
+            ax_raw.scatter(X_valid[ind_rc, 0], X_valid[ind_rc, 1], X_valid[ind_rc, 2], c='g', marker = marker_shapes[r])
+        else:
+            ax_raw.scatter(X_valid[ind_rc, 0], X_valid[ind_rc, 1], X_valid[ind_rc, 2], c='r', marker = marker_shapes[r])
+
+
+
 ax_raw.set_xlabel(r"$x_1$")
 ax_raw.set_ylabel(r"$x_2$")
 ax_raw.set_zlabel(r"$x_3$")
 # Set equal axes for 3D plots
 ax_raw.set_box_aspect((np.ptp(X_train[:, 0]), np.ptp(X_train[:, 1]), np.ptp(X_train[:, 2])))
 plt.title("MLP Classification Boundaries Test Set")
-plt.legend()
 plt.show()
 
 
-
-
-
-########################################## Saving and loading code im guessing I will use this for training different models and then evaluating
-
-
-
-# A state_dict is simply dictionary object that maps each layer to its parameter tensor
-# Only the layers with learnable parameters, as wellas the optimizer's detials, e.g. hyperparameters, are stored
-# Saving the file 'model.pth' to my current working directory (cwd)
-torch.save(quick_two_layer_mlp.state_dict(), os.getcwd() + '/model.pth')
-
-# Print model's state_dict
-print("Model's state_dict:")
-for param_tensor in quick_two_layer_mlp.state_dict():
-    print(param_tensor, "\t", quick_two_layer_mlp.state_dict()[param_tensor].size())
-
-# Print optimizer's state_dict
-print("Optimizer's state_dict:")
-for var_name in optimizer.state_dict():
-    print(var_name, "\t", optimizer.state_dict()[var_name])
-
-
-
-# Model class has to be defined somewhere in script before loading from disk
-load_model = nn.Sequential(
-    nn.Linear(input_dim, n_hidden_neurons),
-    nn.ReLU(),
-    nn.Linear(n_hidden_neurons, output_dim),
-    nn.LogSoftmax(dim=1)
-)
-load_model.load_state_dict(torch.load(os.getcwd() + '/model.pth'))
-load_model.eval()
-
-# Double check test set accuracy
-predictions = load_model(X_test_tensor)
-correct = (predictions.argmax(1) == y_test_tensor).type(torch.float).sum() / X_test_tensor.shape[0]
-print("Model loaded from disk has correct classification accuracy of: {:.1f}%".format(correct.item()*100))
