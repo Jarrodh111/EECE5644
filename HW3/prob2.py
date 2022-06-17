@@ -131,5 +131,5 @@ for alpha in alphas:
     ax.legend(loc='upper left', shadow=True)
     plt.xlabel("Beta")
     plt.ylabel("MSE")
-    plt.title("MSE estimates with {}-fold cross-validation".format(K)+"alpha="+str(alpha))
+    plt.title("MSE estimates with {}-fold cross-validation".format(K)+" alpha="+str(alpha))
     plt.show()

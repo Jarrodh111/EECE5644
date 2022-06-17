@@ -30,8 +30,8 @@ import os
 np.set_printoptions(suppress=True)
 
 # Set seed to generate reproducible "pseudo-randomness" (handles scipy's "randomness" too)
-np.random.seed(7)
-torch.manual_seed(7)
+np.random.seed(111)
+torch.manual_seed(111)
 
 plt.rc('font', size=22)          # controls default text sizes
 plt.rc('axes', titlesize=18)     # fontsize of the axes title
@@ -374,7 +374,7 @@ def do_cv_on_data(X_train, y_train, X_valid, y_valid):
     ax.plot(nerons, mse_train_m, color="b", marker="s", label=r"$D_{train}$")
     ax.plot(nerons, mse_valid_m, color="r", marker="x", label=r"$D_{valid}$")
 
-
+    
     ax.legend(loc='upper left', shadow=True)
     plt.xlabel("Number of Neurons")
     plt.ylabel("Probability of error")
@@ -486,14 +486,14 @@ def do_cv_on_data(X_train, y_train, X_valid, y_valid):
     ax_raw.set_ylabel(r"$x_2$")
     ax_raw.set_zlabel(r"$x_3$")
     # Set equal axes for 3D plots
-    ax_raw.set_box_aspect((np.ptp(X_train[:, 0]), np.ptp(X_train[:, 1]), np.ptp(X_train[:, 2])))
+    ax_raw.set_box_aspect((np.ptp(X_valid[:, 0]), np.ptp(X_valid[:, 1]), np.ptp(X_valid[:, 2])))
     plt.title("MLP Classification Predications on Test Set with "+str(len(X_train))+" training samples")
     plt.show()
     return prob_error, optimal_d
 
 
 ############# End of do CV on data function
-Training_sizes=[100,200,1000,2000,5000]
+Training_sizes=[100,200,500,1000,2000,5000]
 testing_perfomance=np.zeros(len(Training_sizes))
 optimal_ner=np.zeros(len(Training_sizes))
 i=0
