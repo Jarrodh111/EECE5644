@@ -22,7 +22,8 @@ plt.rc('figure', titlesize=22)   # fontsize of the figure title
 
 
 
-alphas=np.geomspace(10**-3,10**3,4)
+alphas=np.geomspace(10**-3,10**3,5)
+alphas=[.001,.01,.1,1,10,100,1000]
 #alphas=[1]
 for alpha in alphas:
 
@@ -56,7 +57,7 @@ for alpha in alphas:
         # Analytical solution is (X^T*X + gamma*ID)^-1 * X^T * y
         n=len(X[0])
         I=np.identity(n)
-        return np.linalg.inv(X.T.dot(X)+beta*I).dot(X.T).dot(y)
+        return np.linalg.inv(X.T.dot(X)+1/beta*I).dot(X.T).dot(y)
 
     def mse(y_preds, y_true):
         # Residual error (X * theta) - y
@@ -65,7 +66,7 @@ for alpha in alphas:
         return np.mean(error ** 2)
 
 
-    betas=np.geomspace(10**-5,10**5,1000)
+    betas=np.geomspace(10**-5,10**5,200)
     n_betas=len(betas)
 
     # Number of folds for CV
@@ -128,7 +129,7 @@ for alpha in alphas:
     # Force x-axis for degrees to be integer
     #ax.xaxis.set_major_locator(MaxNLocator(integer=True))
 
-    ax.legend(loc='upper left', shadow=True)
+    ax.legend(loc='upper right', shadow=True)
     plt.xlabel("Beta")
     plt.ylabel("MSE")
     plt.title("MSE estimates with {}-fold cross-validation".format(K)+" alpha="+str(alpha))

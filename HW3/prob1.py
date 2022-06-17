@@ -435,6 +435,7 @@ def do_cv_on_data(X_train, y_train, X_valid, y_valid):
 
 
     # Simply using sklearn confusion matrix
+    print("\n\nMLP Results:")
     print("Confusion Matrix (rows: Predicted class, columns: True class):")
     conf_mat = confusion_matrix(Z_pred, y_valid)
     print(conf_mat)
@@ -446,7 +447,7 @@ def do_cv_on_data(X_train, y_train, X_valid, y_valid):
     # prob_error = perror_per_class.dot(Nl.T / N)
 
     prob_error = 1 - (correct_class_samples / len(Z_pred))
-
+    print("Probability of Error:"+str(prob_error))
     #########################################################   End CV
 
 
