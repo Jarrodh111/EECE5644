@@ -156,6 +156,7 @@ class_posteriors = class_priors.dot(class_cond_likelihoods)
 decisions = np.argmax(class_posteriors, axis=0) + 0*np.ones(N_valid) 
 
 # Simply using sklearn confusion matrix
+print("\nMAP Results:")
 print("Confusion Matrix (rows: Predicted class, columns: True class):")
 conf_mat = confusion_matrix(decisions, y_valid)
 print(conf_mat)
@@ -261,7 +262,7 @@ def model_test_loader(model, dataloader, criterion):
     
 
 
-print("CV Running:")
+print("\nCV Running:")
 #########################################################   Do CV
 def do_cv_on_data(X_train, y_train, X_valid, y_valid):
     nerons = np.arange(10, 55, 5)
@@ -486,7 +487,7 @@ def do_cv_on_data(X_train, y_train, X_valid, y_valid):
     ax_raw.set_zlabel(r"$x_3$")
     # Set equal axes for 3D plots
     ax_raw.set_box_aspect((np.ptp(X_train[:, 0]), np.ptp(X_train[:, 1]), np.ptp(X_train[:, 2])))
-    plt.title("MLP Classification Predications on Test Set")
+    plt.title("MLP Classification Predications on Test Set with "+str(len(X_train))+" training samples")
     plt.show()
     return prob_error, optimal_d
 
