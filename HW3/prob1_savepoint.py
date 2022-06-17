@@ -187,9 +187,12 @@ for r in L: # Each decision option
             ax_raw.scatter(X_valid[ind_rc, 0], X_valid[ind_rc, 1], X_valid[ind_rc, 2], c='r', marker = marker_shapes[r])
 
 #plt.legend()
-plt.xlabel(r"$x_1$")
-plt.ylabel(r"$x_2$")
-plt.title("2D view of Classification Decisions: Marker Shape/Class, Color/Correct Labels")
+ax_raw.set_xlabel(r"$x_1$")
+ax_raw.set_ylabel(r"$x_2$")
+ax_raw.set_zlabel(r"$x_3$")
+# Set equal axes for 3D plots
+ax_raw.set_box_aspect((np.ptp(X_valid[:, 0]), np.ptp(X_valid[:, 1]), np.ptp(X_valid[:, 2])))
+plt.title("3D view of MAP Classification Decisions: ")
 plt.tight_layout()
 plt.show()
 map_prob_error=prob_error
@@ -372,9 +375,9 @@ def do_cv_on_data(X_train, y_train, X_valid, y_valid):
 
 
     ax.legend(loc='upper left', shadow=True)
-    plt.xlabel("Model Polynomial Order")
-    plt.ylabel("MSE")
-    plt.title("MSE estimates with 5-fold cross-validation for "+str(len(y_valid))+" samples")
+    plt.xlabel("Number of Neurons")
+    plt.ylabel("Probability of error")
+    plt.title("Probabilities of error with 5-fold cross-validation for "+str(len(y_train))+" samples")
     plt.show()
 
 
@@ -483,7 +486,7 @@ def do_cv_on_data(X_train, y_train, X_valid, y_valid):
     ax_raw.set_zlabel(r"$x_3$")
     # Set equal axes for 3D plots
     ax_raw.set_box_aspect((np.ptp(X_train[:, 0]), np.ptp(X_train[:, 1]), np.ptp(X_train[:, 2])))
-    plt.title("MLP Classification Boundaries Test Set")
+    plt.title("MLP Classification Predications on Test Set")
     plt.show()
     return prob_error, optimal_d
 
