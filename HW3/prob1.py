@@ -192,7 +192,7 @@ plt.ylabel(r"$x_2$")
 plt.title("2D view of Classification Decisions: Marker Shape/Class, Color/Correct Labels")
 plt.tight_layout()
 plt.show()
-
+map_prob_error=prob_error
 ###############################################     END Map on Test Data
 
 
@@ -328,26 +328,34 @@ def do_cv_on_data(X_train, y_train, X_valid, y_valid):
             # Make predictions on both the training and validation set
             Z_probs = quick_two_layer_mlp(X_test_tensor).detach().numpy()
             Z_pred = np.argmax(Z_probs, 1)
-
             # Record MSE as well for this model and k-fold
-
-
             # Simply using sklearn confusion matrix
             #print("Confusion Matrix (rows: Predicted class, columns: True class):")
             conf_mat = confusion_matrix(Z_pred, y_valid_k)
             #print(conf_mat)
             correct_class_samples = np.sum(np.diag(conf_mat))
             #print("Total Mumber of Misclassified Samples: {:d}".format(len(Z_pred) - correct_class_samples))
-
             # Alternatively work out probability error based on incorrect decisions per class
             # perror_per_class = np.array(((conf_mat[1,0]+conf_mat[2,0])/Nl[0], (conf_mat[0,1]+conf_mat[2,1])/Nl[1], (conf_mat[0,2]+conf_mat[1,2])/Nl[2]))
             # prob_error = perror_per_class.dot(Nl.T / N)
-
             prob_error = 1 - (correct_class_samples / len(Z_pred))
+            mse_valid_mk[nerind, k] = prob_error
 
 
-            mse_train_mk[nerind - 1, k] = prob_error
-            mse_valid_mk[nerind - 1, k] = prob_error
+            Z_probs = quick_two_layer_mlp(X_tensor).detach().numpy()
+            Z_pred = np.argmax(Z_probs, 1)
+            # Record MSE as well for this model and k-fold
+            # Simply using sklearn confusion matrix
+            #print("Confusion Matrix (rows: Predicted class, columns: True class):")
+            conf_mat = confusion_matrix(Z_pred, y_train_k)
+            #print(conf_mat)
+            correct_class_samples = np.sum(np.diag(conf_mat))
+            #print("Total Mumber of Misclassified Samples: {:d}".format(len(Z_pred) - correct_class_samples))
+            # Alternatively work out probability error based on incorrect decisions per class
+            # perror_per_class = np.array(((conf_mat[1,0]+conf_mat[2,0])/Nl[0], (conf_mat[0,1]+conf_mat[2,1])/Nl[1], (conf_mat[0,2]+conf_mat[1,2])/Nl[2]))
+            # prob_error = perror_per_class.dot(Nl.T / N)
+            prob_error = 1 - (correct_class_samples / len(Z_pred))
+            mse_train_mk[nerind, k] = prob_error
 
             k += 1
 
@@ -356,6 +364,21 @@ def do_cv_on_data(X_train, y_train, X_valid, y_valid):
     # STEP 3: Compute the average MSE loss for that model (based in this case on degree d)
     mse_train_m = np.mean(mse_train_mk, axis=1) # Model average CV loss over folds
     mse_valid_m = np.mean(mse_valid_mk, axis=1) 
+
+    # Plot MSE vs degree
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.plot(nerons, mse_train_m, color="b", marker="s", label=r"$D_{train}$")
+    ax.plot(nerons, mse_valid_m, color="r", marker="x", label=r"$D_{valid}$")
+
+
+    ax.legend(loc='upper left', shadow=True)
+    plt.xlabel("Model Polynomial Order")
+    plt.ylabel("MSE")
+    plt.title("MSE estimates with 5-fold cross-validation for "+str(len(y_valid))+" samples")
+    plt.show()
+
+
+
 
     # +1 as the index starts from 0 while the degrees start from 1
     optimal_d = nerons[np.argmin(mse_valid_m)]
@@ -462,12 +485,13 @@ def do_cv_on_data(X_train, y_train, X_valid, y_valid):
     ax_raw.set_box_aspect((np.ptp(X_train[:, 0]), np.ptp(X_train[:, 1]), np.ptp(X_train[:, 2])))
     plt.title("MLP Classification Boundaries Test Set")
     plt.show()
-    return prob_error
+    return prob_error, optimal_d
 
 
 ############# End of do CV on data function
 Training_sizes=[100,200,1000,2000,5000]
 testing_perfomance=np.zeros(len(Training_sizes))
+optimal_ner=np.zeros(len(Training_sizes))
 i=0
 for T in Training_sizes:
     X_train, y_train = generate_data_from_gmm(T, gmm_pdf)
@@ -476,7 +500,7 @@ for T in Training_sizes:
     print("Testing on trainingset size: "+str(T))
     print("#########################################")
     print("#########################################\n")
-    testing_perfomance[i] = do_cv_on_data(X_train, y_train, X_valid, y_valid)
+    testing_perfomance[i], optimal_ner[i] = do_cv_on_data(X_train, y_train, X_valid, y_valid)
     print("\n#########################################")
     print("#########################################")
     print("Finished Testing on trainingset size: "+str(T))
@@ -485,3 +509,28 @@ for T in Training_sizes:
     i+=1
 
 print(testing_perfomance)
+
+
+
+
+fig, ax = plt.subplots(figsize=(10, 10))
+ax.plot(Training_sizes, testing_perfomance, color="b", marker="s")
+plt.axhline(y=map_prob_error, color='r', linestyle='-')
+ax.set_xscale('log')
+
+plt.xlabel("Dataset size")
+plt.ylabel("Probability of error")
+plt.title("Probability of Error Vs. Training Size")
+plt.show()
+
+
+
+
+fig, ax = plt.subplots(figsize=(10, 10))
+ax.plot(Training_sizes, optimal_ner, color="b", marker="s")
+ax.set_xscale('log')
+
+plt.xlabel("Dataset size")
+plt.ylabel("Optimal # of Neurons")
+plt.title("Optimal Number of Nerons Vs. Training Size")
+plt.show()
